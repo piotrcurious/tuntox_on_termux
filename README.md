@@ -339,3 +339,57 @@ make CFLAGS="-I$PREFIX/include" LDFLAGS="-L$PREFIX/lib -ltoxcore"
 ```
 
 Let me know if you get any errors and I'll help you resolve them. Once tuntox is built successfully, we can discuss how to use it since it will require root access or proper capabilities to create TUN interfaces.
+
+ The issue is that pkg-config isn't finding toxcore. Let's fix this by directly specifying the path and making sure the environment is properly set up:
+
+1. First, let's modify the Makefile again to explicitly handle the linking:
+```bash
+cat > Makefile << 'EOF'
+CFLAGS += -g -Wall -I$(PREFIX)/include
+LDFLAGS += -L$(PREFIX)/lib -ltoxcore -ltoxencryptsave -lsodium -lm
+OBJECTS = cJSON.o client.o gitversion.o log.o main.o tox_bootstrap_json.o util.o
+
+all: tuntox
+
+gitversion.h:
+	echo "#define GITVERSION \"$(shell git describe --always --dirty 2>/dev/null || echo unknown)\"" > $@
+
+%.o: %.c gitversion.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+tuntox: $(OBJECTS)
+	$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
+
+clean:
+	rm -f tuntox *.o gitversion.h
+EOF
+```
+
+2. Make sure the environment is correctly set:
+```bash
+export PREFIX=/data/data/com.termux/files/usr
+export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
+export LD_LIBRARY_PATH=$PREFIX/lib
+```
+
+3. Verify that toxcore.pc exists and is readable:
+```bash
+ls -l $PREFIX/lib/pkgconfig/libtoxcore.pc
+```
+
+4. Clean and rebuild:
+```bash
+make clean
+make
+```
+
+If you still get errors, let's try an alternative approach by directly compiling without using make:
+
+```bash
+cc -o tuntox *.c -I$PREFIX/include -L$PREFIX/lib -ltoxcore -ltoxencryptsave -lsodium -lm \
+   -DGITVERSION=\"$(git describe --always --dirty 2>/dev/null || echo unknown)\"
+```
+
+Let me know which error you get and I'll help you resolve it.
+
+
