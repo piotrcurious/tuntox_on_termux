@@ -110,6 +110,3 @@ Libs: -L${libdir}
 Cflags: -I${includedir}
 Requires: toxcore
 
-# autogen.sh
-#!/bin/sh
-autoreconf --install --force --verbose
